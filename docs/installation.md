@@ -9,6 +9,7 @@ conda activate selfocc
 
 ## 2. Install PyTorch
 ```bash
+conda install nvidia/label/cuda-11.8.0::cuda-nvcc
 pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
 ```
 
@@ -29,6 +30,8 @@ pip install timm
 
 ## 4. Install custom CUDA ops
 ```bash
+conda install conda-forge::cudatoolkit
+conda install nvidia/label/cuda-11.8.0::cuda-cudart-dev
 cd model/encoder/gaussian_encoder/ops && pip install -e .
 cd model/head/localagg && pip install -e .
 # for GaussianFormer-2
