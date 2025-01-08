@@ -51,7 +51,7 @@ cd ./point-transformer/lib/pointops
 python3 setup.py install
 ```
 
-## 4. Install custom CUDA ops
+## 5. Install custom CUDA ops
 ```bash
 conda install conda-forge::cudatoolkit
 conda install nvidia/label/cuda-11.8.0::cuda-cudart-dev
@@ -62,7 +62,7 @@ cd model/head/localagg_prob && pip install -e .
 cd model/head/localagg_prob_fast && pip install -e .
 ```
 
-## 5. (Optional) For visualization
+## 6. (Optional) For visualization
 ```bash
 pip install pyvirtualdisplay mayavi matplotlib==3.7.2 PyQt5
 ```
