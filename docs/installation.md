@@ -31,13 +31,14 @@ pip install timm
 ```
 
 ## 4. Install pointops
+You can choose to install `pointops` using either method 1 or method 2.  
+### 4.1. Method 1
 Clone this repository.
 ```bash
 git clone https://github.com/POSTECH-CVLab/point-transformer.git
 ```
-Comment `#include <THC/THC.h>` in the below files.
+Comment `#include <THC/THC.h>` in the files below.
 ```bash
-
 ./point-transformer/lib/pointops/src/aggregation/aggregation_cuda.cpp
 ./point-transformer/lib/pointops/src/grouping/grouping_cuda.cpp
 ./point-transformer/lib/pointops/src/interpolation/interpolation_cuda.cpp
@@ -49,6 +50,17 @@ Install pointops.
 ```bash
 cd ./point-transformer/lib/pointops
 python3 setup.py install
+```
+
+### 4.1. Method 2
+```
+git clone https://github.com/Silverster98/pointops.git
+```
+
+Install pointops.  
+```
+cd ./pointops
+pip install -e .
 ```
 
 ## 5. Install custom CUDA ops

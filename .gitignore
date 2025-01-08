@@ -173,3 +173,4 @@ modify_weight.py
 epoch2sd.py
 temporal_data
 point_transformer
+pointops

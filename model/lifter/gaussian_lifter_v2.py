@@ -7,7 +7,8 @@ from ..utils.safe_ops import safe_inverse_sigmoid
 from ..utils.sampler import DistributionSampler
 
 try:
-    from pointops import farthest_point_sampling
+    #from pointops import farthest_point_sampling
+    from functions.pointops import furthestsampling as farthest_point_sampling
 except:
     print("farthest_point_sampling import error.")
 
