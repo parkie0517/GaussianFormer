@@ -171,3 +171,4 @@ launch_phigent.sh
 modify_weight.py
 *.npy
 epoch2sd.py
+temporal_data

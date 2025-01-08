@@ -52,13 +52,18 @@ We provide the following checkpoints trained on the SurroundOcc dataset:
 
 ```
 python eval.py --py-config config/xxxx.py --work-dir out/xxxx/ --resume-from out/xxxx/state_dict.pth
+# for example
+CUDA_VISIBLE_DEVICES=0,1 python eval.py --py-config config/nuscenes_gs144000.py --work-dir out/nuscenes_gs144000/ --resume-from out/nuscenes_gs144000/state_dict.pth
 ```
 
 ### Train
 
 Download the pretrained weights for the image backbone [HERE](https://github.com/zhiqi-li/storage/releases/download/v1.0/r101_dcn_fcos3d_pretrain.pth) and put it inside ckpts.
 ```bash
-python train.py --py-config config/xxxx.py --work-dir out/xxxx
+CUDA_VISIBLE_DEVIES=0,1,2,3 python train.py --py-config config/xxxx.py --work-dir out/xxxx
+# for example
+CUDA_VISIBLE_DEVICES=0,1 python train.py --py-config config/nuscenes_gs144000.py --work-dir out/nuscenes_gs144000
+
 ```
 
 Stay tuned for more exciting work and models!🤗
@@ -81,20 +86,3 @@ Our work is inspired by these excellent open-sourced repos:
 
 Our code is originally based on [Sparse4D](https://github.com/HorizonRobotics/Sparse4D) and migrated to the general framework of [SelfOcc](https://github.com/huang-yh/SelfOcc).
 
-## Citation
-
-If you find this project helpful, please consider citing the following paper:
-```
-@article{huang2024gaussian,
-    title={GaussianFormer: Scene as Gaussians for Vision-Based 3D Semantic Occupancy Prediction},
-    author={Huang, Yuanhui and Zheng, Wenzhao and Zhang, Yunpeng and Zhou, Jie and Lu, Jiwen},
-    journal={arXiv preprint arXiv:2405.17429},
-    year={2024}
-}
-@article{huang2024probabilisticgaussiansuperpositionefficient,
-      title={GaussianFormer-2: Probabilistic Gaussian Superposition for Efficient 3D Occupancy Prediction}, 
-      author={Yuanhui Huang and Amonnut Thammatadatrakoon and Wenzhao Zheng and Yunpeng Zhang and Dalong Du and Jiwen Lu},
-      journal={arXiv preprint arXiv:2412.04384},
-      year={2024}
-}
-```

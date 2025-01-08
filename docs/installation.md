@@ -11,6 +11,8 @@ conda activate selfocc
 ```bash
 conda install nvidia/label/cuda-11.8.0::cuda-nvcc
 pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
+pip install einops
+pip install jaxtyping
 ```
 
 ## 3. Install packages from MMLab
@@ -26,6 +28,12 @@ mim install mmdet3d==1.1.1
 ```bash
 pip install spconv-cu117
 pip install timm
+```
+
+## 4. Install pointops
+```bash
+pip install "git+https://github.com/Silverster98/pointops"
+
 ```
 
 ## 4. Install custom CUDA ops

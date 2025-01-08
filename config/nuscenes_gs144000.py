@@ -5,14 +5,14 @@ _base_ = [
 ]
 
 # =========== data config ==============
-input_shape = (1600, 864)
+input_shape = (1600, 864) # default (1600, 864)
 data_aug_conf = {
     "resize_lim": (1.0, 1.0),
     "final_dim": input_shape[::-1],
     "bot_pct_lim": (0.0, 0.0),
     "rot_lim": (0.0, 0.0),
-    "H": 900,
-    "W": 1600,
+    "H": 900, # default 900
+    "W": 1600, # default 1600
     "rand_flip": True,
 }
 val_dataset_config = dict(
@@ -94,7 +94,7 @@ model = dict(
         start_level=1),
     lifter=dict(
         type='GaussianLifter',
-        num_anchor=144000,
+        num_anchor=144000, # default 144000
         embed_dims=embed_dims,
         anchor_grad=True,
         feat_grad=False,
