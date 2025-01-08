@@ -38,6 +38,12 @@ GaussianFormer
 │   │   |   ├── ...
 ```
 
+### Reproducing the Resutls
+| Name  | Type | #Gaussians | mIoU | IoU  |
+| :---: | :---: | :---: | :---: | :---: |
+| Baseline | GaussianFormer | 144000 |  |  |
+| NonEmpty | GaussianFormer | 25600  | 17.57 | 28.79 |
+
 ### Inference
 We provide the following checkpoints trained on the SurroundOcc dataset:
 
@@ -64,7 +70,7 @@ Download the pretrained weights for the image backbone [HERE](https://github.com
 CUDA_VISIBLE_DEVIES=0,1,2,3 python train.py --py-config config/xxxx.py --work-dir out/xxxx
 # for example
 CUDA_VISIBLE_DEVICES=0,1 python train.py --py-config config/nuscenes_gs144000.py --work-dir out/nuscenes_gs144000
-
+CUDA_VISIBLE_DEVICES=0,1 python train.py --py-config config/nuscenes_gs25600_solid.py --work-dir out/nuscenes_gs25600_solid
 ```
 
 Stay tuned for more exciting work and models!🤗
