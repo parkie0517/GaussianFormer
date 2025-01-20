@@ -58,11 +58,11 @@ val_dataset_config = dict(
 
 train_loader = dict(
     batch_size=batch_size,
-    num_workers=2,
+    num_workers=1, # originally 2 but I changed it to 1 for debugging
     shuffle=True
 )
 
 val_loader = dict(
     batch_size=batch_size,
-    num_workers=2
+    num_workers=1 # originally 2 but I changed it to 1 for debugging
 )
