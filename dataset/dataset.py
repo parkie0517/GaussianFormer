@@ -103,7 +103,6 @@ class NuScenesDataset(Dataset):
         scene_token, index = self.keyframes[index]
         info = deepcopy(self.scene_infos[scene_token][index])
         input_dict = self.get_data_info(info)
-        breakpoint()
         if self.data_aug_conf is not None:
             input_dict["aug_configs"] = self._sample_augmentation()
         for t in self.pipeline:

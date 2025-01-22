@@ -304,7 +304,7 @@ class LoadMultiViewImageFromFiles(object):
 
     def __call__(self, results):
         """Call function to load multi-view image from files.
-
+        
         Args:
             results (dict): Result dict containing multi-view image filenames.
 

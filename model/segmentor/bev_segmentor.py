@@ -104,7 +104,7 @@ class BEVSegmentor(CustomBaseSegmentor):
             'points': points
         }
         results.update(kwargs)
-        outs = self.extract_img_feat(**results)
+        outs = self.extract_img_feat(**results) # outputs 4 multi-scale features
         results.update(outs)
 
         # torch.cuda.synchronize()
