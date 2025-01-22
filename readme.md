@@ -61,6 +61,9 @@ python eval.py --py-config config/xxxx.py --work-dir out/xxxx/ --resume-from out
 # for example
 CUDA_VISIBLE_DEVICES=0,1 python eval.py --py-config config/nuscenes_gs144000.py --work-dir out/nuscenes_gs144000/ --resume-from out/nuscenes_gs144000/state_dict.pth
 CUDA_VISIBLE_DEVICES=0,1 python eval.py --py-config config/nuscenes_gs25600_solid.py --work-dir out/nuscenes_gs25600_solid/ --resume-from out/nuscenes_gs25600_solid/state_dict.pth
+
+# for gformer2
+CUDA_VISIBLE_DEVICES=0,1 python eval.py --py-config config/prob/nuscenes_gs6400.py --work-dir out/prob/nuscenes_gs6400/ --resume-from out/prob/nuscenes_gs6400/state_dict.pth
 ```
 
 ### Train
