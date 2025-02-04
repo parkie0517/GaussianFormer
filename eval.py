@@ -28,7 +28,7 @@ def main(local_rank, args):
     cfg = Config.fromfile(args.py_config)
     cfg.work_dir = args.work_dir
 
-    # init DDP
+    # init DDP (Distributed Data Parallel = 분산 학습)
     if args.gpus > 1:
         distributed = True
         ip = os.environ.get("MASTER_ADDR", "127.0.0.1")
@@ -57,8 +57,9 @@ def main(local_rank, args):
     logger = MMLogger('selfocc', log_file=log_file)
     MMLogger._instance_dict['selfocc'] = logger
     logger.info(f'Config:\n{cfg.pretty_text}')
-
+    
     # build model
+    model_build_start_time = time.time()
     import model
     from dataset import get_dataloader
 
@@ -83,7 +84,11 @@ def main(local_rank, args):
         my_model = my_model.cuda()
         raw_model = my_model
     logger.info('done ddp model')
-
+    
+    model_build_end_time = time.time()
+    print(f"Model Build Time: {model_build_end_time - model_build_start_time}")
+    
+    data_load_start_time = time.time()
     train_dataset_loader, val_dataset_loader = get_dataloader(
         cfg.train_dataset_config,
         cfg.val_dataset_config,
@@ -91,7 +96,12 @@ def main(local_rank, args):
         cfg.val_loader,
         dist=distributed,
         val_only=True)
+    data_load_end_time = time.time()
+    print(f"Data Load Time: {data_load_end_time - data_load_start_time}")
     
+    
+    
+    model_load_start_time = time.time()
     # resume and load
     cfg.resume_from = ''
     if osp.exists(osp.join(args.work_dir, 'latest.pth')):
@@ -102,6 +112,8 @@ def main(local_rank, args):
     logger.info('resume from: ' + cfg.resume_from)
     logger.info('work dir: ' + args.work_dir)
 
+    
+    
     if cfg.resume_from and osp.exists(cfg.resume_from):
         map_location = 'cpu'
         ckpt = torch.load(cfg.resume_from, map_location=map_location)
@@ -119,6 +131,11 @@ def main(local_rank, args):
             from misc.checkpoint_util import refine_load_from_sd
             print(raw_model.load_state_dict(
                 refine_load_from_sd(state_dict), strict=False))
+    
+    model_load_end_time = time.time()
+    print(f"Model Load Time: {model_load_end_time - model_load_start_time}")
+    
+    
         
     print_freq = cfg.print_freq
     from misc.metric_util import MeanIoU
@@ -142,6 +159,7 @@ def main(local_rank, args):
                 if isinstance(data[k], torch.Tensor):
                     data[k] = data[k].cuda()
             input_imgs = data.pop('img')
+            
             result_dict = my_model(imgs=input_imgs, metas=data)
             if 'final_occ' in result_dict:
                 for idx, pred in enumerate(result_dict['final_occ']):
@@ -161,7 +179,7 @@ def main(local_rank, args):
                     #         f'val_{i_iter_val}_gt',
                     #         True, 0)
                     miou_metric._after_step(pred_occ, gt_occ, occ_mask)
-                    # breakpoint()
+                    
             
             if i_iter_val % print_freq == 0 and local_rank == 0:
                 logger.info('[EVAL] Iter %5d'%(i_iter_val))
@@ -186,7 +204,7 @@ if __name__ == '__main__':
     
     ngpus = torch.cuda.device_count()
     args.gpus = ngpus
-    print(args)
+    #print(args)
 
     if ngpus > 1:
         torch.multiprocessing.spawn(main, args=(args,), nprocs=args.gpus)

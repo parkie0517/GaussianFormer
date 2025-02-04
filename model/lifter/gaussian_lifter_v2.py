@@ -168,7 +168,7 @@ class GaussianLifterV2(BaseLifter):
         b, n, _, h, w = secondfpn_out.shape
         feature = rearrange(secondfpn_out, 'b n c h w -> b n h w c')
         logits = self.projection(feature) # b, n, h, w, d + 1
-
+        breakpoint()
         projection_mat = metas["projection_mat"].inverse() # img2lidar
         u = (torch.arange(w, dtype=feature.dtype, device=feature.device) + 0.5) / w
         v = (torch.arange(h, dtype=feature.dtype, device=feature.device) + 0.5) / h
@@ -179,7 +179,7 @@ class GaussianLifterV2(BaseLifter):
         uvd1 = torch.cat([uvd, torch.ones_like(uvd)], dim=-1) # b, n, h, w, d, 4
         uvd1[..., :3] = uvd1[..., :3] * self.depth_bins.view(1, 1, 1, 1, -1, 1)
         anchor_pts = projection_mat[:, :, None, None, None] @ uvd1[..., None]
-        anchor_pts = anchor_pts.squeeze(-1)[..., :3]
+        anchor_pts = anchor_pts.squeeze(-1)[..., :3] # (b, n, h, w, d, 3): 기준이 되는 점들
         if kwargs.get("benchmarking", False):
             anchor_gt = None
         else:
@@ -238,7 +238,7 @@ class GaussianLifterV2(BaseLifter):
                     scan_[:, 1].clamp_(self.pc_range[1], self.pc_range[4])
                     scan_[:, 2].clamp_(self.pc_range[2], self.pc_range[5])
                     scan = torch.cat([scan, scan_], 0)
-                # breakpoint()
+                
                 if kwargs.get("benchmarking", False):
                     scan = scan[np.random.permutation(scan.shape[0])]
                     num_subsets = 3
@@ -246,7 +246,7 @@ class GaussianLifterV2(BaseLifter):
                     new_sublens = torch.linspace(0, self.num_anchor, num_subsets + 1, dtype=torch.int, device=scan.device)[1:]
                     scanidx = farthest_point_sampling(scan, sublens, new_sublens)
                 else:
-                    # breakpoint()
+                
                     scanidx = farthest_point_sampling(
                         scan, 
                         torch.tensor([scan.shape[0]], device=scan.device, dtype=torch.int),
