@@ -44,6 +44,16 @@ GaussianFormer
 | Baseline | GaussianFormer | 144000 |  |  |
 | NonEmpty | GaussianFormer | 25600  | 17.57 | 28.79 |
 
+
+### Debugging
+
+```
+In `./surroundocc.py` file, change `num_workers` to 0.
+Then, run the code below.
+CUDA_VISIBLE_DEVICES=0 python eval.py --py-config config/prob/nuscenes_gs6400.py --work-dir out/prob/nuscenes_gs6400/ --resume-from out/prob/nuscenes_gs6400/state_dict.pth
+```
+
+
 ### Inference
 We provide the following checkpoints trained on the SurroundOcc dataset:
 
