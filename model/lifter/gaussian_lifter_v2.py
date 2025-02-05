@@ -164,30 +164,31 @@ class GaussianLifterV2(BaseLifter):
             secondfpn_out = secondfpn_out.unflatten(0, (b, n))
         else:
             secondfpn_out = kwargs["secondfpn_out"]
-        
+        # feature map (108, 200)에 대응하는 원본 이미지 (864, 1600) 좌표 구하기
         b, n, _, h, w = secondfpn_out.shape
         feature = rearrange(secondfpn_out, 'b n c h w -> b n h w c')
-        logits = self.projection(feature) # b, n, h, w, d + 1
-        breakpoint()
+        logits = self.projection(feature) # (b n h w c) -> (b, n, h, w, d + 1)
         projection_mat = metas["projection_mat"].inverse() # img2lidar
-        u = (torch.arange(w, dtype=feature.dtype, device=feature.device) + 0.5) / w
-        v = (torch.arange(h, dtype=feature.dtype, device=feature.device) + 0.5) / h
+        u = (torch.arange(w, dtype=feature.dtype, device=feature.device) + 0.5) / w # 이미지 좌표계에서 x축과 관련 
+        v = (torch.arange(h, dtype=feature.dtype, device=feature.device) + 0.5) / h # 이미지 좌표계에서 y축과 관련
         uv = torch.stack([
             u[None, :].expand(h, w), v[:, None].expand(h, w)], dim=-1) # h, w, 2
-        uv = uv[None, None].expand(b, n, h, w, 2) * metas['image_wh'][:, :, None, None] # b, n, h, w, 2
-        uvd = uv.unsqueeze(4).expand(b, n, h, w, self.num_samples, 2)
+        uv = uv[None, None].expand(b, n, h, w, 2) * metas['image_wh'][:, :, None, None] # (b n h w 2) * (b, n, 1, 1, 2) = (b, n, h, w, 2)
+        uvd = uv.unsqueeze(4).expand(b, n, h, w, self.num_samples, 2) # (B 6 h w 128 2)
         uvd1 = torch.cat([uvd, torch.ones_like(uvd)], dim=-1) # b, n, h, w, d, 4
         uvd1[..., :3] = uvd1[..., :3] * self.depth_bins.view(1, 1, 1, 1, -1, 1)
-        anchor_pts = projection_mat[:, :, None, None, None] @ uvd1[..., None]
-        anchor_pts = anchor_pts.squeeze(-1)[..., :3] # (b, n, h, w, d, 3): 기준이 되는 점들
+        anchor_pts = projection_mat[:, :, None, None, None] @ uvd1[..., None] # vehicle 좌표계로 변환
+        anchor_pts = anchor_pts.squeeze(-1)[..., :3] # (b, n, h, w, d, 3)
         if kwargs.get("benchmarking", False):
             anchor_gt = None
         else:
             oob_mask = (anchor_pts[..., 0] < self.pc_range[0]) | (anchor_pts[..., 0] >= self.pc_range[3]) | \
                        (anchor_pts[..., 1] < self.pc_range[1]) | (anchor_pts[..., 1] >= self.pc_range[4]) | \
-                       (anchor_pts[..., 2] < self.pc_range[2]) | (anchor_pts[..., 2] >= self.pc_range[5])
-            anchor_idx = (anchor_pts - self.pc_start.view(1, 1, 1, 1, 1, 3)) / self.voxel_size
-            anchor_idx = anchor_idx.to(torch.int)
+                       (anchor_pts[..., 2] < self.pc_range[2]) | (anchor_pts[..., 2] >= self.pc_range[5]) # out of bound mask 생성하기
+            anchor_idx = (anchor_pts - self.pc_start.view(1, 1, 1, 1, 1, 3)) / self.voxel_size 
+            anchor_idx = anchor_idx.to(torch.int) # voxel 공간에서 각 anchor point의 index
+            
+            # clamp 함수로 범위 제한
             anchor_idx[..., 0].clamp_(0, self.occ_resolution[0] - 1)
             anchor_idx[..., 1].clamp_(0, self.occ_resolution[1] - 1)
             anchor_idx[..., 2].clamp_(0, self.occ_resolution[2] - 1)
@@ -201,7 +202,7 @@ class GaussianLifterV2(BaseLifter):
             anchor_gt = (anchor_occ != self.empty_label) & anchor_valid
             anchor_gt = torch.cat([anchor_gt, ~torch.any(anchor_gt, dim=-1, keepdim=True)], dim=-1)
         
-        pdfs = torch.softmax(logits, dim=-1)
+        pdfs = torch.softmax(logits, dim=-1) # logit이 결과
         deterministic = getattr(self, 'deterministic', True)
         index, pdf_i = self.sampler.sample(pdfs, deterministic, self.anchors_per_pixel) # b, n, h, w, a
         disable_mask = (pdfs.argmax(dim=-1, keepdim=True) == self.num_samples).expand(
