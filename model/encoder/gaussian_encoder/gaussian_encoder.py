@@ -77,18 +77,18 @@ class GaussianOccEncoder(BaseEncoder):
         rep_features,
         ms_img_feats=None,
         metas=None,
-        **kwargs
+        **kwargs # 나머지 애들은 kwars라는 dict에 저장됨.
     ):
-        feature_maps = ms_img_feats
-        if isinstance(feature_maps, torch.Tensor):
-            feature_maps = [feature_maps]
-        instance_feature = rep_features
-        anchor = representation
+        feature_maps = ms_img_feats # 이게 처음에 extract_img_feature를 사용해서 뽑은 4개 scale의 img feature임
+        if isinstance(feature_maps, torch.Tensor): # feature-maps가 torch.tensor인지 확인하는 함수
+            feature_maps = [feature_maps] # 아닐 경우, 이렇게 list로 바꿔주기
+        instance_feature = rep_features # 쿼리들 (b, 6400, 128)
+        anchor = representation # 3DG들 (b, 6400, 28)
 
-        anchor_embed = self.anchor_encoder(anchor)
+        anchor_embed = self.anchor_encoder(anchor) # 3dg의 anchor embedding을 만들어줌. shape = ([b, 6400, 128])
 
         prediction = []
-        for i, op in enumerate(self.operation_order):
+        for i, op in enumerate(self.operation_order): # 하나의 block 안에 17개의 연산. gformer2는 4개의 block 사용.
             if op == 'spconv':
                 instance_feature = self.layers[i](
                     instance_feature,

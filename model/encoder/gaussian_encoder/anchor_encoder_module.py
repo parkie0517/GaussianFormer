@@ -36,9 +36,9 @@ class SparseGaussian3DEncoder(BaseModule):
         self.output_fc = embedding_layer(self.embed_dims)
 
     def forward(self, box_3d: torch.Tensor):
-        xyz_feat = self.xyz_fc(box_3d[..., :3])
+        xyz_feat = self.xyz_fc(box_3d[..., :3]) # fc 거쳐서 feat 생성
         scale_feat = self.scale_fc(box_3d[..., 3:6])
-        rot_feat = self.rot_fc(box_3d[..., 6:10])
+        rot_feat = self.rot_fc(box_3d[..., 6:10]) # quaternions
         if self.include_opa:
             opacity_feat = self.opacity_fc(box_3d[..., 10:11])
         else:
@@ -48,6 +48,6 @@ class SparseGaussian3DEncoder(BaseModule):
         else:
             semantic_feat = 0.
 
-        output = xyz_feat + scale_feat + rot_feat + opacity_feat + semantic_feat
+        output = xyz_feat + scale_feat + rot_feat + opacity_feat + semantic_feat # 뭐지? 왜 걍 다 더해버리지? ㅋㅋㅋ
         output = self.output_fc(output)
         return output

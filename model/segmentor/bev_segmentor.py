@@ -109,12 +109,12 @@ class BEVSegmentor(CustomBaseSegmentor):
 
         # torch.cuda.synchronize()
         # start_time = time.perf_counter()
-        outs = self.lifter(**results)
+        outs = self.lifter(**results) # 
         # torch.cuda.synchronize()
         # elapsed = time.perf_counter() - start_time
         # results.update({"lifter_time": elapsed})
 
-        results.update(outs)
+        results.update(outs) # lifter 결과 저장하기
         outs = self.encoder(**results)
         if rep_only:
             return outs['representation']

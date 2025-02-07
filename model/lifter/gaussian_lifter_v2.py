@@ -186,37 +186,36 @@ class GaussianLifterV2(BaseLifter):
                        (anchor_pts[..., 1] < self.pc_range[1]) | (anchor_pts[..., 1] >= self.pc_range[4]) | \
                        (anchor_pts[..., 2] < self.pc_range[2]) | (anchor_pts[..., 2] >= self.pc_range[5]) # out of bound mask 생성하기
             anchor_idx = (anchor_pts - self.pc_start.view(1, 1, 1, 1, 1, 3)) / self.voxel_size 
-            anchor_idx = anchor_idx.to(torch.int) # voxel 공간에서 각 anchor point의 index
-            
+            anchor_idx = anchor_idx.to(torch.int) # occ map에서의 anchor point의 index
             # clamp 함수로 범위 제한
             anchor_idx[..., 0].clamp_(0, self.occ_resolution[0] - 1)
             anchor_idx[..., 1].clamp_(0, self.occ_resolution[1] - 1)
             anchor_idx[..., 2].clamp_(0, self.occ_resolution[2] - 1)
 
-            occupancy = metas["occ_label"]
+            occupancy = metas["occ_label"] # label까지 포함된 GT
             valid_mask = metas["occ_cam_mask"]
-            anchor_occ = torch.stack([occ[idx[..., 0], idx[..., 1], idx[..., 2]] for occ, idx in zip(occupancy, anchor_idx)])
-            anchor_occ[oob_mask] = self.empty_label
+            anchor_occ = torch.stack([occ[idx[..., 0], idx[..., 1], idx[..., 2]] for occ, idx in zip(occupancy, anchor_idx)]) # batch에 대한 처리하기 위해 for랑 zip 사용함. 
+            anchor_occ[oob_mask] = self.empty_label # 예측한 anchor_occ에서 oob를 17로 처리
             anchor_valid = torch.stack([occ[idx[..., 0], idx[..., 1], idx[..., 2]] for occ, idx in zip(valid_mask, anchor_idx)])
-            anchor_valid[oob_mask] = False
-            anchor_gt = (anchor_occ != self.empty_label) & anchor_valid
-            anchor_gt = torch.cat([anchor_gt, ~torch.any(anchor_gt, dim=-1, keepdim=True)], dim=-1)
+            anchor_valid[oob_mask] = False # 카메라에서 보이는 영역이지만, 거리가 너무 멀어 oob인 애들은 false로 설정하기
+            anchor_gt = (anchor_occ != self.empty_label) & anchor_valid # binary mask이다. anchor 값 중에 gt로 계산할 애들은 true,
+            anchor_gt = torch.cat([anchor_gt, ~torch.any(anchor_gt, dim=-1, keepdim=True)], dim=-1) # 129번째 값을 추가한다. true면 해당 ray에서 valid한 anchor가 없다는 뜻
         
-        pdfs = torch.softmax(logits, dim=-1) # logit이 결과
-        deterministic = getattr(self, 'deterministic', True)
+        pdfs = torch.softmax(logits, dim=-1) # logit을 확률 분포로 변환
+        deterministic = getattr(self, 'deterministic', True) # getattr 함수를 사용하므로 코드 간소화
         index, pdf_i = self.sampler.sample(pdfs, deterministic, self.anchors_per_pixel) # b, n, h, w, a
-        disable_mask = (pdfs.argmax(dim=-1, keepdim=True) == self.num_samples).expand(
-            -1, -1, -1, -1, self.anchors_per_pixel)
+        disable_mask = (pdfs.argmax(dim=-1, keepdim=True) == self.num_samples).expand( # 최대값의 index가 128이면 null 공간의 index다. depth 예측에 실패한 경우. 그런 애들 true. 그런 애들을 anchor-per-pixel만큼 만들기
+            -1, -1, -1, -1, self.anchors_per_pixel) # disable-mask는 binary tensor다. depth 예측했을 때 내가 지정한 bin 안에 못 들어온 경우 true. valid하면 false다.. shape은 b, 6, 108, 200, a
         # disable_mask = index == self.num_samples
-        sampled_anchor = self.sampler.gather(index.clamp(max=(self.num_samples-1)), anchor_pts) # b, n, h, w, a, 3
+        sampled_anchor = self.sampler.gather(index.clamp(max=(self.num_samples-1)), anchor_pts) # 선택된 깊이의 vehicle 좌표계에서의 좌표. shape은 b, n, h, w, a, 3
         
         anchor_xyz = []
-        for i in range(b):
-            cur_sampled_anchor = sampled_anchor[i][~disable_mask[i]]
+        for i in range(b): # b는 배치를 의미함
+            cur_sampled_anchor = sampled_anchor[i][~disable_mask[i]] # ~를 썼기 때문에 true인 애들이 depth 예측 성공한 애들. 결국 cur-sampled-anchor는 depth 예측이 valid한 애들의 vehcile 좌표계에서의 좌표 모음집
             cur_oob_mask = (cur_sampled_anchor[..., 0] < self.pc_range[0]) | (cur_sampled_anchor[..., 0] >= self.pc_range[3]) | \
                    (cur_sampled_anchor[..., 1] < self.pc_range[1]) | (cur_sampled_anchor[..., 1] >= self.pc_range[4]) | \
-                   (cur_sampled_anchor[..., 2] < self.pc_range[2]) | (cur_sampled_anchor[..., 2] >= self.pc_range[5])
-            scan = cur_sampled_anchor[~cur_oob_mask]
+                   (cur_sampled_anchor[..., 2] < self.pc_range[2]) | (cur_sampled_anchor[..., 2] >= self.pc_range[5]) # cur-sampled-anchor 중에서 범위 안에 있는 애들만 false. 나머지 true
+            scan = cur_sampled_anchor[~cur_oob_mask] # 범위 안에 있는 애들의 좌표 모음집
             
             if self.random_sampling:
                 if scan.shape[0] < self.num_anchor:
@@ -231,7 +230,7 @@ class GaussianLifterV2(BaseLifter):
                 else:
                     scan = scan[np.random.choice(scan.shape[0], self.num_anchor, False)]
             else:
-                if scan.shape[0] < self.num_anchor:
+                if scan.shape[0] < self.num_anchor: # anchor의 개수가 너어어무! 적을 경우에만 작동하는 코드
                     multi = int(math.ceil(self.num_anchor * 1.0 / scan.shape[0])) - 1
                     scan_ = scan.repeat(multi, 1)
                     scan_ = scan_ + torch.randn_like(scan_) * 0.1
@@ -248,11 +247,11 @@ class GaussianLifterV2(BaseLifter):
                     scanidx = farthest_point_sampling(scan, sublens, new_sublens)
                 else:
                 
-                    scanidx = farthest_point_sampling(
+                    scanidx = farthest_point_sampling( # fps 알고리즘은 여러 개의 point 중에서 대표적인 점들을 선택해준다.
                         scan, 
-                        torch.tensor([scan.shape[0]], device=scan.device, dtype=torch.int),
-                        torch.tensor([self.num_anchor], device=scan.device, dtype=torch.int))
-                scan = scan[scanidx, :]
+                        torch.tensor([scan.shape[0]], device=scan.device, dtype=torch.int), # n개의 점 중에서
+                        torch.tensor([self.num_anchor], device=scan.device, dtype=torch.int)) # num_anchor 개수만큼 뽑아줘~
+                scan = scan[scanidx, :] # 개수 줄이거나, 늘리기
             
             anchor_xyz.append(scan)
 
@@ -298,27 +297,27 @@ class GaussianLifterV2(BaseLifter):
                 # # print(f"precision: {precision}")
                 breakpoint()
         
-        anchor_xyz = torch.stack(anchor_xyz)
-        anchor_xyz[..., 0] = (anchor_xyz[..., 0] - self.pc_range[0]) / (self.pc_range[3] - self.pc_range[0])
-        anchor_xyz[..., 1] = (anchor_xyz[..., 1] - self.pc_range[1]) / (self.pc_range[4] - self.pc_range[1])
-        anchor_xyz[..., 2] = (anchor_xyz[..., 2] - self.pc_range[2]) / (self.pc_range[5] - self.pc_range[2])
+        anchor_xyz = torch.stack(anchor_xyz) # batch에 대해 처리한 거 하나의 텐서로 묶기
+        anchor_xyz[..., 0] = (anchor_xyz[..., 0] - self.pc_range[0]) / (self.pc_range[3] - self.pc_range[0]) # 0 ~ 1 사이로 normalization
+        anchor_xyz[..., 1] = (anchor_xyz[..., 1] - self.pc_range[1]) / (self.pc_range[4] - self.pc_range[1]) # 0 ~ 1 사이로 normalization
+        anchor_xyz[..., 2] = (anchor_xyz[..., 2] - self.pc_range[2]) / (self.pc_range[5] - self.pc_range[2]) # 0 ~ 1 사이로 normalization
 
         if self.xyz_act == "sigmoid":
-            xyz = safe_inverse_sigmoid(anchor_xyz)
-        anchor = torch.cat([
-            xyz, torch.tile(self.anchor[None], (b, 1, 1))], dim=-1)
-        
-        if self.random_samples > 0:
-            random_anchors = torch.tile(self.random_anchors[None], (b, 1, 1))
-            anchor = torch.cat([anchor, random_anchors], dim=1)
+            xyz = safe_inverse_sigmoid(anchor_xyz) # 좌표값인 anchor-xyz에 sigmoid 적용. 이유 모름
+        anchor = torch.cat([ # cat으로 
+            xyz, torch.tile(self.anchor[None], (b, 1, 1))], dim=-1) # tile함수는 self.anchor[None]을 (b, 1, 1)만큼 반복 복사한다.
+        # 위에서 3 + 25는. 3은 xyz. 25는 나머지 값들 (쿼리 channel, 또는 3d gs의 특성일 수 있음)
+        if self.random_samples > 0: # 선택적으로, random_sample을 원하면 아래 보이느느 self.random_anchors를 기존의 anchor에 더하는 코드다.
+            random_anchors = torch.tile(self.random_anchors[None], (b, 1, 1)) 
+            anchor = torch.cat([anchor, random_anchors], dim=1) # random anchor + anchor
 
-        instance_feature = torch.tile(
+        instance_feature = torch.tile( # [1, 6400, 128] -> [b, 6400, 128]
             self.instance_feature[None], (b, 1, 1)
         )
-        return {
-            'rep_features': instance_feature,
-            'representation': anchor,
+        return { # 요기까지 디버깅함
+            'rep_features': instance_feature, # 쿼리의 feature인 거 같음. shape [b, 6400, 128]
+            'representation': anchor, # 이건 3DG인 거 같음. shape [b, 6400, 28]. 요기서 3 + 25. 3은 좌표
             'anchor_init': anchor[0].clone(),
-            'pixel_logits': logits,
-            'pixel_gt': anchor_gt,
+            'pixel_logits': logits, # depth 분포 만들 때 생성한 feature. shape: (b, n, h, w, d + 1)
+            'pixel_gt': anchor_gt, # anchor의 gt로. occupied또는 unoccupied를 의미함
         }
