@@ -162,7 +162,7 @@ def main(local_rank, args):
             
             result_dict = my_model(imgs=input_imgs, metas=data)
             if 'final_occ' in result_dict:
-                for idx, pred in enumerate(result_dict['final_occ']):
+                for idx, pred in enumerate(result_dict['final_occ']): # (b, 640000)이라서 batch에 대해서 돈다
                     pred_occ = pred
                     gt_occ = result_dict['sampled_label'][idx]
                     occ_mask = result_dict['occ_mask'][idx].flatten()

@@ -120,4 +120,4 @@ class GaussianOccEncoder(BaseEncoder):
             else:
                 raise NotImplementedError(f"{op} is not supported.")
 
-        return {"representation": prediction}
+        return {"representation": prediction} # prediction[1]['gaussian'].means 이런식으로 데이터 접근가능

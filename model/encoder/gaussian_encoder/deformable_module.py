@@ -179,12 +179,12 @@ class DeformableFeatureAggregation(BaseModule):
                     weights.permute(0, 1, 4, 2, 3, 5)
                     .contiguous()
                     .reshape(
-                        bs,
-                        num_anchor,
-                        self.num_pts,
-                        self.num_cams,
-                        self.num_levels,
-                        self.num_groups,
+                        bs, # 1
+                        num_anchor,  # 6400
+                        self.num_pts, # 13
+                        self.num_cams, # 6
+                        self.num_levels, # 4
+                        self.num_groups, # 4
                     )
                 )
                 weight_mask = (

@@ -155,7 +155,7 @@ class GaussianLifterV2(BaseLifter):
     def forward(self, metas, **kwargs):
         if self.initialize_backbone is not None:
             b, n = kwargs["imgs"].shape[:2]
-            initialize_input = kwargs["imgs"].flatten(0, 1)
+            initialize_input = kwargs["imgs"].flatten(0, 1) # original imgs shape is (864, 1600)
             if self.initializer_img_downsample is not None:
                 initialize_input = nn.functional.interpolate(
                     initialize_input, scale_factor=self.initializer_img_downsample, 
