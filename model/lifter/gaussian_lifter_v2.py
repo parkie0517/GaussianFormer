@@ -201,7 +201,7 @@ class GaussianLifterV2(BaseLifter):
             anchor_gt = (anchor_occ != self.empty_label) & anchor_valid # binary mask이다. anchor 값 중에 gt로 계산할 애들은 true,
             anchor_gt = torch.cat([anchor_gt, ~torch.any(anchor_gt, dim=-1, keepdim=True)], dim=-1) # 129번째 값을 추가한다. true면 해당 ray에서 valid한 anchor가 없다는 뜻
         
-        pdfs = torch.softmax(logits, dim=-1) # logit을 확률 분포로 변환
+        pdfs = torch.softmax(logits, dim=-1) # logit을 확률 분포로 변환. pdfs = (1, 6, 108, 200, 129)
         deterministic = getattr(self, 'deterministic', True) # getattr 함수를 사용하므로 코드 간소화
         index, pdf_i = self.sampler.sample(pdfs, deterministic, self.anchors_per_pixel) # b, n, h, w, a
         disable_mask = (pdfs.argmax(dim=-1, keepdim=True) == self.num_samples).expand( # 최대값의 index가 128이면 null 공간의 index다. depth 예측에 실패한 경우. 그런 애들 true. 그런 애들을 anchor-per-pixel만큼 만들기
