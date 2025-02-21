@@ -182,7 +182,7 @@ def main(local_rank, args):
          True, 17, filter_minmax=False)
     miou_metric.reset()
 
-    while epoch < max_num_epochs:
+    while epoch < max_num_epochs: # max epoch = 20
         my_model.train()
         os.environ['eval'] = 'false'
         if hasattr(train_dataset_loader.sampler, 'set_epoch'):
@@ -191,7 +191,7 @@ def main(local_rank, args):
         time.sleep(10)
         data_time_s = time.time()
         time_s = time.time()
-        for i_iter, data in enumerate(train_dataset_loader):
+        for i_iter, data in enumerate(train_dataset_loader): # length of train_dataset_loader is 28130
             if first_run:
                 i_iter = i_iter + last_iter
 
